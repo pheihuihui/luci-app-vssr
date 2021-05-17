@@ -1,6 +1,6 @@
 local ucursor = require 'luci.model.uci'.cursor()
 local name = 'vssr'
-local json = require 'luci.jsonc'
+local json = require 'cjson'
 local nixio = require 'nixio'
 local server_section = arg[1]
 local proto = arg[2]
@@ -270,11 +270,32 @@ table.insert(outbounds_table, gen_bt_outbounds())
 table.insert(rules_table, bt_rules)
 table.insert(rules_table, bt_rules1)
 
+local api_rules = {
+    inboundTag = {
+        'api'
+    },
+    outboundTag = 'api',
+    type = 'field'
+}
+
+table.insert(rules_table, api_rules)
+
+local emptyobj = {xxx = 1}
+
 local v2ray = {
+    stats = {},
     log = {
         -- error = "/var/vssrsss.log",
         -- access = "/var/v2rays.log",
         loglevel = 'warning'
+    },
+    api = {
+        tag = 'api',
+        services = {
+            'HandlerService',
+            'LoggerService',
+            'StatsService'
+        }
     },
     -- 传入连接
     inbounds = {
@@ -286,10 +307,19 @@ local v2ray = {
             streamSettings = {
                 sockopt = {tproxy = (proto == 'tcp') and 'redirect' or 'tproxy'}
             }
+        },
+        {
+            listen = '192.168.100.1',
+            port = 10085,
+            protocol = 'dokodemo-door',
+            settings = {
+                address = '127.0.0.1'
+            },
+            tag = 'api'
         }
     },
     -- 传出连接
     outbounds = outbounds_table,
     routing = {domainStrategy = 'IPIfNonMatch', rules = rules_table}
 }
-print(json.stringify(v2ray, 1))
+print(json.encode(v2ray))
